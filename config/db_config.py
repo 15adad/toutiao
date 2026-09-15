@@ -1,28 +1,25 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-DATABASE_URL = "mysql+pymysql://root:root@localhost:3306/fastapi?charset=utf8mb4"
+DATABASE_URL = "mysql+aiomysql://root:root@localhost:3306/fastapi?charset=utf8mb4"
 
-# 创建异步引擎
 async_engine = create_async_engine(
     DATABASE_URL,
-    echo=True, # 输出SQL日志,默认False
+    echo=True,
 )
 
-# 创建异步会话工厂
 AsyncSessionLocal = async_sessionmaker(
     bind=async_engine,
     expire_on_commit=False,
     class_=AsyncSession,
 )
 
-# Session依赖
+
+# ✅ 依赖注入的是 session，不是 connection
 async def get_db():
-    async with async_engine.begin() as conn:
+    async with AsyncSessionLocal() as session:      # ← 用 session 工厂
         try:
-            yield conn
-            await conn.commit()
+            yield session                            # ← 交出 session
+            await session.commit()
         except Exception:
-            await conn.rollback()
+            await session.rollback()
             raise
-        finally:
-            await conn.close()
